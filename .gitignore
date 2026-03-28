@@ -1,0 +1,6 @@
+venv/
+__pycache__/
+*.pyc
+mlruns/
+tn_election_data.csv
+.DS_Store

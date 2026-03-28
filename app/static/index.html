@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN Election Prediction Dashboard</title>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --text-color: #ffffff;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background: var(--primary-gradient);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            box-sizing: border-box;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin: 0;
+            text-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.8;
+            margin-top: 10px;
+        }
+
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            max-width: 1200px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+            flex: 1 1 400px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            box-sizing: border-box;
+            transition: background 0.3s ease;
+        }
+        
+        .form-group input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .form-group input:focus {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-predict {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #ff0844 0%, #ffb199 100%);
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 15px rgba(255, 8, 68, 0.4);
+        }
+
+        .btn-predict:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 8, 68, 0.6);
+        }
+
+        .dashboard-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .result-text {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        
+        .radar-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: none;
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-msg {
+            color: #ffb199;
+            font-weight: 600;
+            text-align: center;
+            margin-top: 15px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>TN Election Prediction 2026</h1>
+        <p>Interactive MLOps Dashboard (DMK vs ADMK vs TVK)</p>
+    </div>
+
+    <div class="container">
+        <!-- Input Form -->
+        <div class="glass-panel">
+            <h2>Constituency Parameters</h2>
+            <form id="predictionForm">
+                <div class="form-group">
+                    <label>DMK Strength (0-100)</label>
+                    <input type="number" id="dmk_strength" value="65.5" step="0.1" required>
+                </div>
+                <div class="form-group">
+                    <label>ADMK Strength (0-100)</label>
+                    <input type="number" id="admk_strength" value="60.0" step="0.1" required>
+                </div>
+                <div class="form-group">
+                    <label>TVK Strength (0-100)</label>
+                    <input type="number" id="tvk_strength" value="35.0" step="0.1" required>
+                </div>
+                <div class="form-group">
+                    <label>NTK Strength (0-100)</label>
+                    <input type="number" id="ntk_strength" value="20.0" step="0.1" required>
+                </div>
+                <div class="form-group">
+                    <label>PMK Strength (0-100)</label>
+                    <input type="number" id="pmk_strength" value="15.0" step="0.1" required>
+                </div>
+                <div class="form-group">
+                    <label>BJP Strength (0-100)</label>
+                    <input type="number" id="bjp_strength" value="10.0" step="0.1" required>
+                </div>
+                <div class="form-group">
+                    <label>INC Strength (0-100)</label>
+                    <input type="number" id="inc_strength" value="12.0" step="0.1" required>
+                </div>
+                <div class="form-group">
+                    <label>Literacy Rate (%)</label>
+                    <input type="number" id="literacy_rate" value="80.5" step="0.1" required>
+                </div>
+                <div class="form-group">
+                    <label>Urban Population (%)</label>
+                    <input type="number" id="urban_population_percentage" value="50.0" step="0.1" required>
+                </div>
+                <div class="form-group">
+                    <label>Anti-Incumbency Factor (0-10)</label>
+                    <input type="number" id="anti_incumbency_factor" value="7.5" step="0.1" required>
+                </div>
+                <div class="form-group">
+                    <label>Campaign Spending Index (1-10)</label>
+                    <input type="number" id="campaign_spending_index" value="8.0" step="0.1" required>
+                </div>
+                <button type="submit" class="btn-predict">Analyze & Predict</button>
+            </form>
+            <div class="error-msg" id="errorMsg"></div>
+        </div>
+
+        <!-- Dashboard Visuals -->
+        <div class="glass-panel dashboard-panel">
+            <h2>Prediction Results</h2>
+            <div class="spinner" id="spinner"></div>
+            
+            <div id="resultsContent" style="display: none; width: 100%;">
+                <div class="result-text" id="winnerText">Winner: -</div>
+                
+                <div class="chart-container">
+                    <canvas id="probChart"></canvas>
+                </div>
+
+                <div class="radar-container">
+                    <canvas id="radarChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let probChartInstance = null;
+        let radarChartInstance = null;
+
+        document.getElementById('predictionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // UI State
+            document.getElementById('spinner').style.display = 'block';
+            document.getElementById('resultsContent').style.display = 'none';
+            document.getElementById('errorMsg').style.display = 'none';
+
+            // Gather Data
+            const data = {
+                dmk_strength: parseFloat(document.getElementById('dmk_strength').value),
+                admk_strength: parseFloat(document.getElementById('admk_strength').value),
+                tvk_strength: parseFloat(document.getElementById('tvk_strength').value),
+                ntk_strength: parseFloat(document.getElementById('ntk_strength').value),
+                pmk_strength: parseFloat(document.getElementById('pmk_strength').value),
+                bjp_strength: parseFloat(document.getElementById('bjp_strength').value),
+                inc_strength: parseFloat(document.getElementById('inc_strength').value),
+                literacy_rate: parseFloat(document.getElementById('literacy_rate').value),
+                urban_population_percentage: parseFloat(document.getElementById('urban_population_percentage').value),
+                anti_incumbency_factor: parseFloat(document.getElementById('anti_incumbency_factor').value),
+                campaign_spending_index: parseFloat(document.getElementById('campaign_spending_index').value)
+            };
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.detail || 'Prediction failed.');
+                }
+
+                const result = await response.json();
+                
+                // Update UI
+                document.getElementById('spinner').style.display = 'none';
+                document.getElementById('resultsContent').style.display = 'block';
+                
+                let winnerColor = '#4bc0c0';
+                if (result.prediction === 0) winnerColor = '#ff6384'; // DMK
+                else if (result.prediction === 1) winnerColor = '#4bc0c0'; // ADMK
+                else if (result.prediction === 2) winnerColor = '#ffce56'; // TVK
+                else if (result.prediction === 3) winnerColor = '#ff5722'; // NTK (Orange/Red)
+                else if (result.prediction === 4) winnerColor = '#ffeb3b'; // PMK (Yellow)
+                else if (result.prediction === 5) winnerColor = '#ff9800'; // BJP (Saffron)
+                else if (result.prediction === 6) winnerColor = '#03a9f4'; // INC (Light Blue)
+
+                document.getElementById('winnerText').innerHTML = `Projected Winner:<br><span style="color: ${winnerColor}">${result.prediction_label}</span>`;
+
+                // Update Charts
+                updateCharts(
+                    result.probability_dmk, 
+                    result.probability_admk,
+                    result.probability_tvk,
+                    result.probability_ntk,
+                    result.probability_pmk,
+                    result.probability_bjp,
+                    result.probability_inc,
+                    data
+                );
+
+            } catch (error) {
+                document.getElementById('spinner').style.display = 'none';
+                document.getElementById('errorMsg').innerText = error.message;
+                document.getElementById('errorMsg').style.display = 'block';
+            }
+        });
+
+        function updateCharts(probDmk, probAdmk, probTvk, probNtk, probPmk, probBjp, probInc, inputData) {
+            // Doughnut Chart for Probability
+            const ctxProb = document.getElementById('probChart').getContext('2d');
+            if (probChartInstance) probChartInstance.destroy();
+            
+            probChartInstance = new Chart(ctxProb, {
+                type: 'doughnut',
+                data: {
+                    labels: ['DMK', 'ADMK', 'TVK', 'NTK', 'PMK', 'BJP', 'INC'],
+                    datasets: [{
+                        data: [
+                            (probDmk * 100).toFixed(1), 
+                            (probAdmk * 100).toFixed(1), 
+                            (probTvk * 100).toFixed(1),
+                            (probNtk * 100).toFixed(1),
+                            (probPmk * 100).toFixed(1),
+                            (probBjp * 100).toFixed(1),
+                            (probInc * 100).toFixed(1)
+                        ],
+                        backgroundColor: ['#ff6384', '#4bc0c0', '#ffce56', '#ff5722', '#ffeb3b', '#ff9800', '#03a9f4'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#fff' } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) { return context.label + ': ' + context.parsed + '%'; }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Radar Chart for Inputs
+            const ctxRadar = document.getElementById('radarChart').getContext('2d');
+            if (radarChartInstance) radarChartInstance.destroy();
+
+            radarChartInstance = new Chart(ctxRadar, {
+                type: 'radar',
+                data: {
+                    labels: [
+                        'DMK Str', 
+                        'ADMK Str', 
+                        'TVK Str', 
+                        'NTK Str',
+                        'PMK Str',
+                        'BJP Str',
+                        'INC Str',
+                        'Literacy Rate', 
+                        'Urban Pop', 
+                        'Anti-Incumbency (x10)', 
+                        'Campaign Index (x10)'
+                    ],
+                    datasets: [{
+                        label: 'Constituency Profile',
+                        data: [
+                            inputData.dmk_strength,
+                            inputData.admk_strength,
+                            inputData.tvk_strength,
+                            inputData.ntk_strength,
+                            inputData.pmk_strength,
+                            inputData.bjp_strength,
+                            inputData.inc_strength,
+                            inputData.literacy_rate,
+                            inputData.urban_population_percentage,
+                            inputData.anti_incumbency_factor * 10, // scale up for visualization
+                            inputData.campaign_spending_index * 10 // scale up for visualization
+                        ],
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                        borderColor: '#ffffff',
+                        pointBackgroundColor: '#ffb199',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: '#ffb199'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(255, 255, 255, 0.2)' },
+                            grid: { color: 'rgba(255, 255, 255, 0.2)' },
+                            pointLabels: { color: '#fff', font: { size: 10 } },
+                            ticks: { display: false, max: 100, min: 0 }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
